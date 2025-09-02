@@ -1,0 +1,78 @@
+// Jungle Jumpers JS - separate file
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W = canvas.width, H = canvas.height;
+
+let score = 0, lives = 3, running = false;
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const menu = document.getElementById('menu');
+
+const player = {x:150, y:500, w:50, h:50, vy:0, jumping:false};
+let platforms = [];
+
+function makePlatforms(){
+  platforms = [];
+  const baseY = H-80;
+  platforms.push({x:0,y:baseY,w:W,height:80,type:'ground'});
+  for(let i=0;i<6;i++){
+    platforms.push({x:200+i*150, y:baseY - 100 - Math.random()*200, w:120, height:20, type:'plat'});
+  }
+}
+makePlatforms();
+
+function updateHUD(){ scoreEl.textContent = score; livesEl.textContent = lives; }
+updateHUD();
+
+const keys = {};
+document.addEventListener('keydown', e=>{ keys[e.code]=true; if(e.code==='Space') e.preventDefault(); });
+document.addEventListener('keyup', e=>{ keys[e.code]=false; });
+
+const tapArea = document.getElementById('tapArea');
+tapArea.addEventListener('touchstart', e=>{ e.preventDefault(); jump(); });
+canvas.addEventListener('mousedown', e=>{ jump(); });
+
+function jump(){ if(!player.jumping){ player.vy=-12; player.jumping=true; } }
+
+document.getElementById('startBtn').addEventListener('click', ()=>{ menu.style.display='none'; running=true; loop(); });
+
+function loop(){
+  if(!running) return;
+
+  if(keys['ArrowLeft']) player.x -= 4;
+  if(keys['ArrowRight']) player.x += 4;
+  if(keys['Space']) jump();
+
+  player.vy += 0.7;
+  player.y += player.vy;
+
+  let onPlatform = false;
+  for(const p of platforms){
+    if(player.vy >=0 && player.x + player.w > p.x && player.x < p.x + p.w){
+      if(player.y + player.h > p.y && player.y + player.h < p.y + 20){
+        player.y = p.y - player.h; player.vy=0; player.jumping=false; onPlatform=true;
+      }
+    }
+  }
+
+  if(player.y > H){
+    lives--; updateHUD();
+    player.x=150; player.y=100; player.vy=0; player.jumping=true;
+    if(lives<=0){
+      running=false;
+      menu.style.display='flex';
+      menu.innerHTML=`<h1>Game Over</h1><p>Score: ${score}</p><button class="btn" id="restartBtn">Restart</button>`;
+      document.getElementById('restartBtn').addEventListener('click', ()=>{ location.reload(); });
+    }
+  }
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#A3D5D3'; ctx.fillRect(0,0,W,H);
+
+  for(const p of platforms){ ctx.fillStyle=p.type==='ground'?'#4CAF50':'#2E7D32'; ctx.fillRect(p.x,p.y,p.w,p.height); }
+
+  ctx.fillStyle='#FF6F61'; ctx.fillRect(player.x,player.y,player.w,player.h);
+
+  requestAnimationFrame(loop);
+}
