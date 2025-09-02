@@ -1,0 +1,73 @@
+// Happy Hoppers JS - separate file version
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W = canvas.width, H = canvas.height;
+
+// Game state
+let score = 0; let lives = 3; let running = false; let muted = false;
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const overlay = document.getElementById('overlay');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const muteBtn = document.getElementById('muteBtn');
+
+// Audio setup
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function beep(freq=440, time=0.08){
+  if(muted) return;
+  if(!audioCtx) audioCtx = new AudioCtx();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type='sine'; o.frequency.value = freq;
+  g.gain.value = 0.02;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + time);
+}
+
+// Resize canvas
+function resize(){
+  const ratio = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.round(rect.width * ratio);
+  canvas.height = Math.round(rect.height * ratio);
+  W = canvas.width; H = canvas.height;
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Player
+const player = {x:150,y:400,w:64,h:64,vy:0,jumping:false};
+
+// Platforms
+let platforms = [];
+function makePlatforms(){
+  platforms = [];
+  const baseY = H - 80;
+  platforms.push({x:0,y:baseY,w:W,height:80,type:'ground'});
+  for(let i=0;i<8;i++){
+    const pw = 120 + Math.random()*90;
+    const px = 220 + i*140 + (Math.random()*80 - 40);
+    const py = baseY - 100 - (Math.random()*240);
+    platforms.push({x:px,y:py,w:pw,height:20,type:'plat'});
+  }
+}
+
+// Stars
+let stars = [];
+function spawnStars(){
+  stars = [];
+  for(const p of platforms){
+    if(p.type==='plat' && Math.random()<0.6){
+      stars.push({x:p.x + p.w/2 - 12, y:p.y - 30, r:12, collected:false});
+    }
+  }
+}
+
+// Game reset
+function resetGame(){
+  score = 0; lives = 3; updateHUD();
+  player.x = 150; player.y = 300; player.vy = 0; player.jumping=false;
